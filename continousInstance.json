@@ -153,6 +153,7 @@
                             "",
                             [
                                 "#!/bin/bash\n",
+                                "# Version: VERSION_ID \n",
                                 "yum install -y java-1.8.0-openjdk \n",
                                 "mkdir /app/ \n",
                                 "aws s3 cp s3://",
