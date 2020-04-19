@@ -190,6 +190,22 @@
         "IAMR3SSSH": {
             "Type": "AWS::IAM::Role",
             "Properties": {
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": "root",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "*",
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ],
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
                     "Statement": [
