@@ -1,0 +1,232 @@
+{
+    "Mappings": {
+        "RegionMap": {
+            "us-east-1": {
+                "HVM64": "ami-0ff8a91507f77f867",
+                "HVMG2": "ami-0a584ac55a7631c0c"
+            },
+            "us-east-2": {
+                "HVM64": "ami-0f7919c33c90f5b58",
+                "HVMG2": "ami-050d581a8c1d4a570"
+            },
+            "us-west-1": {
+                "HVM64": "ami-0bdb828fd58c52235",
+                "HVMG2": "ami-066ee5fd4a9ef77f1"
+            },
+            "us-west-2": {
+                "HVM64": "ami-0d6621c01e8c2de2c",
+                "HVMG2": "ami-0ded0751341bcc45b"
+            },
+            "eu-west-1": {
+                "HVM64": "ami-047bb4163c506cd98",
+                "HVMG2": "ami-0a7c483d527806435"
+            },
+            "ap-northeast-1": {
+                "HVM64": "ami-06cd52961ce9f0d85",
+                "HVMG2": "ami-053cdd503598e4a9d"
+            },
+            "ap-southeast-1": {
+                "HVM64": "ami-08569b978cc4dfa10",
+                "HVMG2": "ami-0be9df32ae9f92309"
+            }
+        }
+    },
+    "Parameters": {
+        "BucketName": {
+            "Type": "String",
+            "Description": "Nome do bucket que versiona os pacotes",
+            "Default": "metabase-artifacts-accountId"
+        },
+        "KeyPair": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Defina a chave a ser utilizada pela instancia.",
+            "MinLength": "1"
+        },
+        "InstanceTypeParameter": {
+            "Type": "String",
+            "Default": "t2.micro",
+            "AllowedValues": [
+                "t2.micro",
+                "m4.xlarge",
+                "m5.large"
+            ],
+            "Description": "Defina o tipo de instância desejada."
+        },
+        "SecurityGroups": {
+            "Type": "String",
+            "Description": "Insira o id do security group dividos por virgulas sem ouver mais de um. (ex: sg-12345,sg-123456) [Lembre-se de liberar a porta 3000]"
+        },
+        "SelectedSubnet": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Selecione a subnet deseja. [Lembre-se que a subnet deve estar acessivel]"
+        }
+    },
+    "Outputs": {
+        "Endereco": {
+            "Description": "IP de acesso ao metabase",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "EC2I10NYG",
+                                "PublicIp"
+                            ]
+                        },
+                        ":3000"
+                    ]
+                ]
+            }
+        }
+    },
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "deee4f47-a745-417c-862b-818c0dc0fd05": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 386,
+                    "y": 113
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "143ffbf0-ed0f-457e-854e-6abc203e2d6a": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 560,
+                    "y": 110
+                },
+                "z": 0,
+                "embeds": []
+            },
+            "c25aefb6-27ca-403b-9ad8-fe796a37f08d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 470,
+                    "y": 220
+                },
+                "z": 0,
+                "embeds": [],
+                "isassociatedwith": [
+                    "143ffbf0-ed0f-457e-854e-6abc203e2d6a"
+                ]
+            }
+        }
+    },
+    "Resources": {
+        "EC2I10NYG": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "IamInstanceProfile": {
+                    "Ref": "IAMIP2BOAO"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "RegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "HVM64"
+                    ]
+                },
+                "KeyName": {
+                    "Ref": "KeyPair"
+                },
+                "InstanceType": {
+                    "Ref": "InstanceTypeParameter"
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash\n",
+                                "yum install -y java-1.8.0-openjdk \n",
+                                "mkdir /app/ \n",
+                                "aws s3 cp s3://",
+                                {
+                                    "Ref": "BucketName"
+                                },
+                                "/metabase.jar /app/metabase.jar\n",
+                                "echo \"[Unit] \nDescription=Metabase service \nAfter=network.target \nStartLimitIntervalSec=0 \n\n[Service] \nType=simple \nRestart=always \nRestartSec=1 \nUser=root \nExecStart=/usr/bin/env java -jar /app/metabase.jar \n \n[Install] \nWantedBy=multi-user.target \" > /etc/systemd/system/metabase.service \n",
+                                "systemctl start metabase"
+                            ]
+                        ]
+                    }
+                },
+                "NetworkInterfaces": [
+                    {
+                        "AssociatePublicIpAddress": "true",
+                        "DeviceIndex": 0,
+                        "GroupSet": [
+                            {
+                                "Ref": "SecurityGroups"
+                            }
+                        ],
+                        "SubnetId": {
+                            "Ref": "SelectedSubnet"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "deee4f47-a745-417c-862b-818c0dc0fd05"
+                }
+            }
+        },
+        "IAMR3SSSH": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.&api-domain;"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "143ffbf0-ed0f-457e-854e-6abc203e2d6a"
+                }
+            }
+        },
+        "IAMIP2BOAO": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Roles": [
+                    {
+                        "Ref": "IAMR3SSSH"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "c25aefb6-27ca-403b-9ad8-fe796a37f08d"
+                }
+            }
+        }
+    }
+}
