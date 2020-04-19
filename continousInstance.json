@@ -197,7 +197,7 @@
                             "Effect": "Allow",
                             "Principal": {
                                 "Service": [
-                                    "ec2.&api-domain;"
+                                    "ec2.amazonaws.com"
                                 ]
                             },
                             "Action": [
